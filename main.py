@@ -4,11 +4,10 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Text, ForeignKey, Boolean
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired, Email, Length, Regexp, InputRequired
+from wtforms import StringField, SubmitField, SelectField, IntegerField
+from wtforms.validators import DataRequired, Email, Length, Regexp, InputRequired, URL
 import datetime
 import os
-
 
 
 # Flask configuration
@@ -51,6 +50,23 @@ with app.app_context():
     db.create_all()
 
 
+class AddNewCafe(FlaskForm):
+    """
+    New Cafe Add Form
+    """
+    name = StringField("Cafe Name", validators=[DataRequired(), Length(min=2, max=100), InputRequired()])
+    map_url = StringField("Map URL", validators=[DataRequired(), Length(min=2, max=100), InputRequired(), URL()])
+    img_url = StringField("IMG URL", validators=[DataRequired(), Length(min=2, max=100), InputRequired(), URL()])
+    location = StringField("Location", validators=[DataRequired(), Length(min=2, max=100), InputRequired()])
+    has_sockets = SelectField("Has sockets?:", choices=[("False","No"), ("True","Yes")])
+    has_toilet = SelectField("Has toilet?:", choices=[("False","No"), ("True","Yes")])
+    has_wifi = SelectField("Has wifi?:", choices=[("False","No"), ("True","Yes")])
+    can_take_calls = SelectField("Can take calls?:", choices=[("False","No"), ("True","Yes")])
+    seats = IntegerField("Seats", validators=[DataRequired(), InputRequired()])
+    coffee_price = IntegerField("Coffee Price", validators=[DataRequired(), InputRequired()])
+    submit = SubmitField("Add information")
+
+
 def convert_data_nums_to_str(data:list):
     """
     Takes all data and convert values from 0 and 1 to "No" and "Yes"
@@ -78,6 +94,40 @@ def index():
     all_cafe = convert_data_nums_to_str(cafe)
 
     return render_template("index.html", all_cafe=all_cafe)
+
+@app.route("/add-new-cafe", methods=["GET", "POST"])
+def add_new_cafe():
+    """
+    Takes data from form and
+    :return: Add new data into database
+    """
+    form = AddNewCafe()
+    if form.validate_on_submit():
+        # Create new cafe object
+        new_cafe = Cafe (
+        name = request.form.get("name"),
+        map_url = request.form.get("map_url"),
+        img_url = request.form.get("img_url"),
+        location = request.form.get("location"),
+
+        # Check cnd convert str into bool
+        has_sockets = request.form.get("has_sockets") == "True",
+        has_toilet = request.form.get("has_toilet")  == "True",
+        has_wifi = request.form.get("has_wifi")  == "True",
+        can_take_calls = request.form.get("can_take_calls")  == "True",
+        # Check cnd convert str into bool
+
+        seats = request.form.get("seats"),
+        coffee_price = request.form.get("coffee_price")
+        )
+
+        # Add new cafe into DataBase
+        db.session.add(new_cafe)
+        db.session.commit()
+
+        return redirect(url_for("index"))
+
+    return render_template("add_new_cafe.html", form=form)
 
 if __name__ == "__main__":
     app.run(debug=True, port=5005)
