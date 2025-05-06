@@ -51,25 +51,33 @@ with app.app_context():
     db.create_all()
 
 
-def group_data_for_template(object_list):
+def convert_data_nums_to_str(data:list):
     """
-    Group skills by 3 elements into nested list
-    :param object_list:
-    :return:  grouped_list, nested list with grouped objects by 3 elements
+    Takes all data and convert values from 0 and 1 to "No" and "Yes"
+    :param data: list of Cafe objects
+    :return: list with converted attributes
     """
-    grouped_list = []
-    for i in range(0, len(object_list), 3):
-        # Create a group of 3 elements (or less if there is a remainder)
-        grouped_list.append(object_list[i:i + 3])
+    columns = ["has_sockets", "has_toilet", "has_wifi", "can_take_calls"]
+    for cafe in data:
+        for column in columns:
+            value = getattr(cafe, column)  # Take value of attribute
+            if value:  # Checking if a value is 1
+                setattr(cafe, column, "Yes")  # Set new value YES
+            else:  # If the value is 0
+                setattr(cafe, column, "No")  # Set new value NO
 
-    return grouped_list
-
-
+    return data
 
 # Routs
 @app.route("/")
 def index():
-    return render_template("index.html")
+    # Cafe data from DataBase
+    cafe = db.session.execute(db.Select(Cafe))
+    cafe = cafe.scalars().all()
+    # Data with changed cafe options info
+    all_cafe = convert_data_nums_to_str(cafe)
+
+    return render_template("index.html", all_cafe=all_cafe)
 
 if __name__ == "__main__":
     app.run(debug=True, port=5005)
