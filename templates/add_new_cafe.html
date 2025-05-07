@@ -8,7 +8,8 @@
                     <h2 class="section-heading text-uppercase">Portfolio</h2>
                     <h3 class="section-subheading text-muted">Lorem ipsum dolor sit amet consectetur.</h3>
                 </div>
-            {{ render_form(form, novalidate=True, button_map={"submit": "primary"}) }}
+                        {{ form.csrf_token }}
+                        {{ render_form(form, novalidate=True, button_map={"submit": "primary"}) }}
             </div>
         </section>
         <!-- Contact-->

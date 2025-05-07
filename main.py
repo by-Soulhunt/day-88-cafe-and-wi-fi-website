@@ -3,8 +3,8 @@ from flask import Flask, abort, render_template, redirect, url_for, flash, reque
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Text, ForeignKey, Boolean
-from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, IntegerField
+from flask_wtf import FlaskForm, CSRFProtect
+from wtforms import StringField, SubmitField, SelectField, IntegerField, FloatField
 from wtforms.validators import DataRequired, Email, Length, Regexp, InputRequired, URL
 import datetime
 import os
@@ -54,16 +54,16 @@ class AddNewCafe(FlaskForm):
     """
     New Cafe Add Form
     """
-    name = StringField("Cafe Name", validators=[DataRequired(), Length(min=2, max=100), InputRequired()])
-    map_url = StringField("Map URL", validators=[DataRequired(), Length(min=2, max=100), InputRequired(), URL()])
-    img_url = StringField("IMG URL", validators=[DataRequired(), Length(min=2, max=100), InputRequired(), URL()])
-    location = StringField("Location", validators=[DataRequired(), Length(min=2, max=100), InputRequired()])
+    name = StringField("Cafe Name", validators=[DataRequired(), Length(min=2, max=100)])
+    map_url = StringField("Map URL", validators=[DataRequired(), URL()])
+    img_url = StringField("IMG URL", validators=[DataRequired(), URL()])
+    location = StringField("Location", validators=[DataRequired(), Length(min=2, max=100)])
     has_sockets = SelectField("Has sockets?:", choices=[("False","No"), ("True","Yes")])
     has_toilet = SelectField("Has toilet?:", choices=[("False","No"), ("True","Yes")])
     has_wifi = SelectField("Has wifi?:", choices=[("False","No"), ("True","Yes")])
     can_take_calls = SelectField("Can take calls?:", choices=[("False","No"), ("True","Yes")])
-    seats = IntegerField("Seats", validators=[DataRequired(), InputRequired()])
-    coffee_price = IntegerField("Coffee Price", validators=[DataRequired(), InputRequired()])
+    seats = IntegerField("Seats", validators=[DataRequired()])
+    coffee_price = FloatField("Coffee Price", validators=[DataRequired()])
     submit = SubmitField("Add information")
 
 
@@ -110,12 +110,12 @@ def add_new_cafe():
         img_url = request.form.get("img_url"),
         location = request.form.get("location"),
 
-        # Check cnd convert str into bool
+        # Check and convert str into bool
         has_sockets = request.form.get("has_sockets") == "True",
         has_toilet = request.form.get("has_toilet")  == "True",
         has_wifi = request.form.get("has_wifi")  == "True",
         can_take_calls = request.form.get("can_take_calls")  == "True",
-        # Check cnd convert str into bool
+        # Check and convert str into bool
 
         seats = request.form.get("seats"),
         coffee_price = request.form.get("coffee_price")
@@ -128,6 +128,46 @@ def add_new_cafe():
         return redirect(url_for("index"))
 
     return render_template("add_new_cafe.html", form=form)
+
+
+@app.route("/edit/<int:cafe_id>", methods=["GET", "POST"])
+def edit_cafe(cafe_id):
+    current_cafe = db.session.get_one(Cafe, cafe_id)
+
+    if not current_cafe:
+        return redirect(url_for("index"))
+
+    # Show current information from DataBase
+    edit_form = AddNewCafe(
+        obj=current_cafe
+    )
+    if edit_form.validate_on_submit():
+        current_cafe.name = edit_form.name.data
+        current_cafe.map_url = edit_form.map_url.data
+        current_cafe.img_url = edit_form.img_url.data
+        current_cafe.location = edit_form.location.data
+        current_cafe.has_sockets = edit_form.has_sockets.data == "True"
+        current_cafe.has_toilet = edit_form.has_toilet.data == "True"
+        current_cafe.has_wifi = edit_form.has_wifi.data == "True"
+        current_cafe.can_take_calls = edit_form.can_take_calls.data == "True"
+        current_cafe.seats = edit_form.seats.data
+        current_cafe.coffee_price = edit_form.coffee_price.data
+        db.session.commit()
+
+        return redirect(url_for("index"))
+
+    return render_template("add_new_cafe.html", form=edit_form)
+
+
+@app.route("/delete", methods=["POST"])
+def delete_cafe():
+    cafe_id = request.form.get('cafe_id')
+    current_cafe = db.session.get_one(Cafe, cafe_id)
+    db.session.delete(current_cafe)
+    db.session.commit()
+
+    return redirect(url_for("index"))
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5005)
